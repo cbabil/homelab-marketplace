@@ -5,11 +5,11 @@ Curated Docker app definitions for [Homelab Assistant](https://github.com/cbabil
 ## Quick Start
 
 ```bash
-# Browse apps
-ls apps/
-
-# Install an app (via Homelab Assistant)
+# Install an app
 homelab install pihole
+
+# Add a new app
+./scripts/create-app.sh <category> <app-id>
 ```
 
 ## Apps
@@ -29,13 +29,13 @@ homelab install pihole
 | [Traefik](apps/networking/traefik) | networking | Reverse proxy with auto HTTPS |
 | [Uptime Kuma](apps/monitoring/uptime-kuma) | monitoring | Uptime monitoring |
 
-## Structure
+## Documentation
 
-```
-apps/<category>/<app-id>/app.yaml
-```
+Visit the **[Wiki](https://github.com/cbabil/homelab-marketplace/wiki)** for:
 
-Categories: `automation` `media` `monitoring` `networking` `security` `storage` `utility`
+- [App Categories](https://github.com/cbabil/homelab-marketplace/wiki/App-Categories) - Browse all apps
+- [App Definition](https://github.com/cbabil/homelab-marketplace/wiki/App-Definition) - YAML format reference
+- [Repository Structure](https://github.com/cbabil/homelab-marketplace/wiki/Repository-Structure) - How the repo is organized
 
 ## Contributing
 
