@@ -1,0 +1,60 @@
+name: Bug Report
+description: Report a bug with an app definition or validation
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: app
+    attributes:
+      label: App
+      description: Which app is affected?
+      options:
+        - Authelia
+        - Grafana
+        - Heimdall
+        - Jellyfin
+        - n8n
+        - Netdata
+        - Nextcloud
+        - Pi-hole
+        - Portainer
+        - Prometheus
+        - Traefik
+        - Uptime Kuma
+        - Other/Multiple
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened?
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Run `homelab install ...`
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Any relevant error messages or logs
+      render: shell

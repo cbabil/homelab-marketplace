@@ -8,13 +8,12 @@
 - [ ] Other (describe)
 
 ## App Checklist (for new apps)
+- [ ] Ran `./scripts/validate-app.sh <app-id>` successfully
 - [ ] App ID is unique and follows naming convention (lowercase, hyphens)
-- [ ] Docker image is from a trusted source
+- [ ] Docker image is from a trusted registry with pinned version
 - [ ] No hardcoded credentials or secrets
-- [ ] YAML is valid and follows schema
-- [ ] Category is appropriate
-- [ ] Description is clear (max 200 chars)
-- [ ] Tested locally and works
+- [ ] Category matches directory structure
+- [ ] Description is 20-200 chars, starts with capital, ends with punctuation
 
 ## Security Checklist
 - [ ] No sensitive data exposed
