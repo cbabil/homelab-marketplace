@@ -146,3 +146,4 @@ DETAILS
             --title "$TAG" \
             --notes-file dist/RELEASE_NOTES.md \
             --latest
+
