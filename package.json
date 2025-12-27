@@ -1,0 +1,17 @@
+{
+  "name": "homelab-marketplace",
+  "version": "0.1.0",
+  "description": "A curated collection of self-hosted application definitions for homelabs",
+  "private": true,
+  "scripts": {
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cbabil/homelab-marketplace.git"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}
