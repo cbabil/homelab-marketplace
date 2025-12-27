@@ -1,0 +1,207 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'apps/**'
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'apps/**'
+  workflow_dispatch:
+    inputs:
+      app_id:
+        description: 'Specific app to test (leave empty for all)'
+        required: false
+        type: string
+
+jobs:
+  discover-apps:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.find-apps.outputs.apps }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find apps to test
+        id: find-apps
+        run: |
+          if [ -n "${{ inputs.app_id }}" ]; then
+            # Test specific app
+            APP_FILE=$(find apps -name "app.yaml" -path "*/${{ inputs.app_id }}/*" | head -1)
+            if [ -z "$APP_FILE" ]; then
+              echo "App '${{ inputs.app_id }}' not found"
+              exit 1
+            fi
+            echo "apps=[\"${{ inputs.app_id }}\"]" >> $GITHUB_OUTPUT
+          else
+            # Find all apps
+            APPS=$(find apps -name "app.yaml" -exec dirname {} \; | xargs -I{} basename {} | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            echo "apps=$APPS" >> $GITHUB_OUTPUT
+          fi
+
+  test-app:
+    needs: discover-apps
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.discover-apps.outputs.apps) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Parse app configuration
+        id: config
+        run: |
+          APP_FILE=$(find apps -name "app.yaml" -path "*/${{ matrix.app }}/*" | head -1)
+          echo "app_file=$APP_FILE" >> $GITHUB_OUTPUT
+
+          python3 << EOF
+          import yaml
+          import os
+
+          with open('$APP_FILE') as f:
+              data = yaml.safe_load(f)
+
+          docker = data.get('docker', {})
+          image = docker.get('image', '')
+
+          # Get ports
+          ports = docker.get('ports', [])
+          port_args = ''
+          first_port = ''
+          for p in ports:
+              container = p.get('container', '')
+              host = p.get('host', '')
+              protocol = p.get('protocol', 'tcp')
+              if container and host:
+                  port_args += f' -p {host}:{container}/{protocol}'
+                  if not first_port:
+                      first_port = str(host)
+
+          # Get environment variables with defaults
+          env_vars = docker.get('environment', [])
+          env_args = ''
+          for env in env_vars:
+              name = env.get('name', '')
+              value = env.get('value', '')
+              if name and value:
+                  env_args += f' -e {name}={value}'
+
+          # Get healthcheck config
+          healthcheck = data.get('healthcheck', {})
+          health_endpoint = healthcheck.get('endpoint', '/health')
+          health_port = healthcheck.get('port', first_port)
+          health_protocol = healthcheck.get('protocol', 'http')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'image={image}\n')
+              f.write(f'port_args={port_args}\n')
+              f.write(f'env_args={env_args}\n')
+              f.write(f'first_port={first_port}\n')
+              f.write(f'health_endpoint={health_endpoint}\n')
+              f.write(f'health_port={health_port}\n')
+              f.write(f'health_protocol={health_protocol}\n')
+          EOF
+
+      - name: Pull Docker image
+        run: |
+          echo "Pulling ${{ steps.config.outputs.image }}..."
+          docker pull ${{ steps.config.outputs.image }}
+
+      - name: Start container
+        id: container
+        run: |
+          CONTAINER_NAME="test-${{ matrix.app }}-$$"
+          echo "container_name=$CONTAINER_NAME" >> $GITHUB_OUTPUT
+
+          echo "Starting container..."
+          docker run -d \
+            --name "$CONTAINER_NAME" \
+            ${{ steps.config.outputs.port_args }} \
+            ${{ steps.config.outputs.env_args }} \
+            ${{ steps.config.outputs.image }}
+
+          # Wait for container to start
+          sleep 10
+
+      - name: Check container is running
+        run: |
+          if ! docker ps | grep -q "${{ steps.container.outputs.container_name }}"; then
+            echo "Container failed to start!"
+            echo "=== Container logs ==="
+            docker logs "${{ steps.container.outputs.container_name }}" 2>&1 || true
+            exit 1
+          fi
+          echo "Container is running"
+
+      - name: Test health endpoint
+        if: steps.config.outputs.first_port != ''
+        run: |
+          PORT="${{ steps.config.outputs.health_port }}"
+          ENDPOINT="${{ steps.config.outputs.health_endpoint }}"
+          PROTOCOL="${{ steps.config.outputs.health_protocol }}"
+
+          if [ -z "$PORT" ]; then
+            echo "No port exposed, skipping health check"
+            exit 0
+          fi
+
+          echo "Waiting for service to be ready..."
+          MAX_ATTEMPTS=30
+          ATTEMPT=0
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS..."
+
+            if [ "$PROTOCOL" = "tcp" ]; then
+              if nc -z localhost "$PORT" 2>/dev/null; then
+                echo "TCP port $PORT is responding"
+                exit 0
+              fi
+            else
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "${PROTOCOL}://localhost:${PORT}${ENDPOINT}" 2>/dev/null || echo "000")
+              echo "HTTP response: $HTTP_CODE"
+
+              if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 500 ]; then
+                echo "Service is responding on ${PROTOCOL}://localhost:${PORT}${ENDPOINT}"
+                exit 0
+              fi
+            fi
+
+            sleep 2
+          done
+
+          echo "Service did not become ready in time"
+          echo "=== Container logs ==="
+          docker logs "${{ steps.container.outputs.container_name }}" 2>&1 || true
+          exit 1
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop "${{ steps.container.outputs.container_name }}" 2>/dev/null || true
+          docker rm "${{ steps.container.outputs.container_name }}" 2>/dev/null || true
+
+  summary:
+    needs: [discover-apps, test-app]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.test-app.result }}" = "failure" ]; then
+            echo "Some integration tests failed!"
+            exit 1
+          fi
+          echo "All integration tests passed!"

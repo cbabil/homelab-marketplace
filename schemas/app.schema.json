@@ -271,6 +271,76 @@
       "maxItems": 5,
       "uniqueItems": true,
       "description": "GitHub usernames of maintainers"
+    },
+    "screenshots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["url", "alt"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://.*\\.(png|jpg|jpeg|webp|gif)$",
+            "description": "HTTPS URL to screenshot image"
+          },
+          "alt": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 100,
+            "description": "Alt text describing the screenshot"
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 5,
+      "description": "Screenshots of the app UI (1-5 images)"
+    },
+    "healthcheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "pattern": "^/.*$",
+          "description": "HTTP endpoint path for health check (e.g., /health, /api/health)"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Port to check (defaults to first exposed port)"
+        },
+        "protocol": {
+          "type": "string",
+          "enum": ["http", "https", "tcp"],
+          "default": "http",
+          "description": "Protocol for health check"
+        },
+        "interval": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 300,
+          "default": 30,
+          "description": "Check interval in seconds"
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 10,
+          "description": "Timeout in seconds"
+        },
+        "retries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3,
+          "description": "Number of retries before marking unhealthy"
+        }
+      },
+      "description": "Health check configuration for monitoring app status"
     }
   }
 }

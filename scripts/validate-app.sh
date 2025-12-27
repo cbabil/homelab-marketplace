@@ -207,6 +207,18 @@ if [[ ! "$DESC" =~ [.!]$ ]]; then
     ERRORS=$((ERRORS + 1))
 fi
 
+# Check healthcheck configuration (optional but validated if present)
+HEALTHCHECK=$(python3 -c "import yaml; import json; print(json.dumps(yaml.safe_load(open('$APP_FILE')).get('healthcheck', {})))" 2>/dev/null)
+if [ "$HEALTHCHECK" != "{}" ]; then
+    echo -e "${GREEN}✓ Healthcheck configuration present${NC}"
+fi
+
+# Check screenshots (optional but validated if present)
+SCREENSHOTS_COUNT=$(python3 -c "import yaml; print(len(yaml.safe_load(open('$APP_FILE')).get('screenshots', [])))" 2>/dev/null)
+if [ "$SCREENSHOTS_COUNT" -gt 0 ]; then
+    echo -e "${GREEN}✓ Screenshots present ($SCREENSHOTS_COUNT images)${NC}"
+fi
+
 # Check privileged mode
 PRIVILEGED=$(python3 -c "import yaml; print(yaml.safe_load(open('$APP_FILE')).get('docker', {}).get('privileged', False))" 2>/dev/null)
 if [ "$PRIVILEGED" = "True" ]; then
