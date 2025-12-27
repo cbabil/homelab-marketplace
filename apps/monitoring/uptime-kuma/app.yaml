@@ -37,3 +37,8 @@ requirements:
   storage: "1GB"
 
 featured: false
+
+healthcheck:
+  endpoint: /
+  port: 3001
+  protocol: http

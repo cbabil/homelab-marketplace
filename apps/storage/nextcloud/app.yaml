@@ -57,3 +57,8 @@ requirements:
   storage: "10GB"
 
 featured: true
+
+healthcheck:
+  endpoint: /status.php
+  port: 8082
+  protocol: http

@@ -45,3 +45,8 @@ requirements:
   storage: "2GB"
 
 featured: true
+
+healthcheck:
+  endpoint: /healthz
+  port: 5678
+  protocol: http

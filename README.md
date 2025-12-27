@@ -1,3 +1,5 @@
+<div align="center">
+
 # Homelab Marketplace
 
 [![Validate Apps](https://github.com/cbabil/homelab-marketplace/actions/workflows/validate.yml/badge.svg)](https://github.com/cbabil/homelab-marketplace/actions/workflows/validate.yml)
@@ -7,7 +9,13 @@
 [![GitHub issues](https://img.shields.io/github/issues/cbabil/homelab-marketplace)](https://github.com/cbabil/homelab-marketplace/issues)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/cbabil/homelab-marketplace)](https://github.com/cbabil/homelab-marketplace/pulls)
 
-Curated Docker app definitions for [Homelab Assistant](https://github.com/cbabil/homelab).
+**Curated Docker app definitions for self-hosted infrastructure**
+
+[Quick Start](#quick-start) · [Apps](#apps) · [Documentation](https://github.com/cbabil/homelab-marketplace/wiki) · [Contributing](CONTRIBUTING.md)
+
+</div>
+
+---
 
 ## Quick Start
 
@@ -51,8 +59,10 @@ Visit the **[Wiki](https://github.com/cbabil/homelab-marketplace/wiki)** for:
 
 Want to add an app? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Links
+---
 
-- [Security Policy](SECURITY.md)
-- [Releases](https://github.com/cbabil/homelab-marketplace/releases)
-- [License](LICENSE) (MIT)
+<div align="center">
+
+[Security Policy](SECURITY.md) · [Releases](https://github.com/cbabil/homelab-marketplace/releases) · [License](LICENSE)
+
+</div>

@@ -45,3 +45,8 @@ requirements:
   storage: "1GB"
 
 featured: true
+
+healthcheck:
+  endpoint: /api/status
+  port: 9443
+  protocol: https

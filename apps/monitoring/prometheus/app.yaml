@@ -41,3 +41,8 @@ requirements:
   storage: "10GB"
 
 featured: true
+
+healthcheck:
+  endpoint: /-/healthy
+  port: 9090
+  protocol: http

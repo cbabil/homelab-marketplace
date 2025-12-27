@@ -49,3 +49,8 @@ requirements:
   storage: "500MB"
 
 featured: false
+
+healthcheck:
+  endpoint: /
+  port: 8083
+  protocol: http

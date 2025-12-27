@@ -53,3 +53,8 @@ requirements:
   storage: "1GB"
 
 featured: true
+
+healthcheck:
+  endpoint: /admin
+  port: 8080
+  protocol: http

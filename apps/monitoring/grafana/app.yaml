@@ -49,3 +49,8 @@ requirements:
   storage: "1GB"
 
 featured: true
+
+healthcheck:
+  endpoint: /api/health
+  port: 3000
+  protocol: http

@@ -49,3 +49,8 @@ requirements:
   storage: "100MB"
 
 featured: true
+
+healthcheck:
+  endpoint: /api/health
+  port: 9091
+  protocol: http

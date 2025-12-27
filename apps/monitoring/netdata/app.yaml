@@ -41,3 +41,8 @@ requirements:
   storage: "2GB"
 
 featured: false
+
+healthcheck:
+  endpoint: /api/v1/info
+  port: 19999
+  protocol: http

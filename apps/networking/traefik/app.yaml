@@ -49,3 +49,8 @@ requirements:
   storage: "100MB"
 
 featured: true
+
+healthcheck:
+  endpoint: /ping
+  port: 8081
+  protocol: http

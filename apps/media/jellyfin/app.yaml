@@ -53,3 +53,8 @@ requirements:
   storage: "10GB"
 
 featured: true
+
+healthcheck:
+  endpoint: /health
+  port: 8096
+  protocol: http
