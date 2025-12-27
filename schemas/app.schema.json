@@ -5,7 +5,7 @@
   "description": "Schema for app.yaml definitions in the Homelab Marketplace",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "name", "description", "version", "category", "tags", "icon", "repository", "documentation", "docker", "requirements"],
+  "required": ["id", "name", "description", "version", "category", "author", "tags", "icon", "repository", "documentation", "docker", "requirements", "maintainers"],
   "properties": {
     "id": {
       "type": "string",
