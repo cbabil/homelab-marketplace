@@ -1,0 +1,89 @@
+name: PR Welcome
+
+on:
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const prNumber = context.payload.pull_request.number;
+            const author = context.payload.pull_request.user.login;
+
+            // Get changed files
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner,
+              repo,
+              pull_number: prNumber
+            });
+
+            // Detect if this is a new app submission
+            const appFiles = files.filter(f => f.filename.match(/^apps\/[^/]+\/[^/]+\/app\.yaml$/));
+            const isNewApp = appFiles.some(f => f.status === 'added');
+
+            let comment = `## Welcome!
+
+            Thank you @${author} for your contribution! :tada:
+
+            `;
+
+            if (isNewApp) {
+              // Extract app info from the path
+              const appPath = appFiles.find(f => f.status === 'added')?.filename || appFiles[0]?.filename;
+              const pathParts = appPath?.split('/') || [];
+              const category = pathParts[1] || 'unknown';
+              const appId = pathParts[2] || 'unknown';
+
+              comment += `### New App Submission Detected
+
+            | Field | Value |
+            |-------|-------|
+            | App ID | \`${appId}\` |
+            | Category | \`${category}\` |
+            | Files Changed | ${files.length} |
+
+            ### Automated Checks
+            The following checks will run automatically:
+            - [ ] YAML Schema validation
+            - [ ] Docker image version check (no \`:latest\`)
+            - [ ] Secret detection
+            - [ ] Manifest sync check
+
+            ### Review Checklist
+            A maintainer will review the following:
+            - [ ] App is from a trusted source
+            - [ ] Documentation is complete
+            - [ ] Resource requirements are reasonable
+            - [ ] No security concerns
+
+            `;
+            } else {
+              comment += `### PR Overview
+
+            | Stat | Value |
+            |------|-------|
+            | Files Changed | ${files.length} |
+
+            `;
+            }
+
+            comment += `---
+            *This is an automated message. Check the [Contributing Guide](https://github.com/${owner}/${repo}/blob/master/CONTRIBUTING.md) for more info.*`;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: prNumber,
+              body: comment
+            });

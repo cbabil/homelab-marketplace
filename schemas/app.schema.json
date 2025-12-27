@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/cbabil/homelab-marketplace/schemas/app.schema.json",
+  "title": "Homelab Marketplace App",
+  "description": "Schema for app.yaml definitions in the Homelab Marketplace",
+  "type": "object",
+  "required": ["id", "name", "description", "version", "category", "docker", "requirements"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Unique lowercase identifier for the app"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50,
+      "description": "Display name for the app"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 200,
+      "description": "Brief description of the app"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version of the app definition"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["automation", "media", "monitoring", "networking", "security", "storage", "utility"],
+      "description": "Category for the app"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "minItems": 1,
+      "description": "Tags for filtering and discovery"
+    },
+    "icon": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the app icon"
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the source repository"
+    },
+    "documentation": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the official documentation"
+    },
+    "docker": {
+      "type": "object",
+      "required": ["image"],
+      "properties": {
+        "image": {
+          "type": "string",
+          "pattern": "^[a-z0-9._/-]+:[a-z0-9._-]+$",
+          "not": {
+            "pattern": ":latest$"
+          },
+          "description": "Docker image with pinned version (not :latest)"
+        },
+        "ports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["container", "host", "protocol", "description"],
+            "properties": {
+              "container": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "host": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "protocol": {
+                "type": "string",
+                "enum": ["tcp", "udp"]
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "volumes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["container", "host", "mode", "description"],
+            "properties": {
+              "container": {
+                "type": "string",
+                "pattern": "^/"
+              },
+              "host": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["rw", "ro"]
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "environment": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "description"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]*$"
+              },
+              "value": {
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "required": ["memory", "cpu", "storage"],
+      "properties": {
+        "memory": {
+          "type": "string",
+          "pattern": "^[0-9]+(MB|GB)$",
+          "description": "Minimum RAM required"
+        },
+        "cpu": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?$",
+          "description": "Minimum CPU cores"
+        },
+        "storage": {
+          "type": "string",
+          "pattern": "^[0-9]+(MB|GB|TB)$",
+          "description": "Minimum storage required"
+        }
+      }
+    },
+    "featured": {
+      "type": "boolean",
+      "description": "Whether the app is featured on the homepage"
+    }
+  }
+}

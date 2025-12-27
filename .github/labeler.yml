@@ -1,0 +1,53 @@
+# Labeler configuration for auto-labeling PRs
+# See: https://github.com/actions/labeler
+
+# Category labels based on app location
+category:automation:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/automation/**'
+
+category:media:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/media/**'
+
+category:monitoring:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/monitoring/**'
+
+category:networking:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/networking/**'
+
+category:security:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/security/**'
+
+category:storage:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/storage/**'
+
+category:utility:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/utility/**'
+
+# Type labels
+new-app:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/**/app.yaml'
+      - all-globs-to-all-files: '!manifest.json'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '*.md'
+          - 'docs/**'
+
+schema:
+  - changed-files:
+      - any-glob-to-any-file: 'schemas/**'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/workflows/**'
+          - 'scripts/**'

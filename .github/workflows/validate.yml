@@ -21,90 +21,178 @@ jobs:
         run: |
           pip install pyyaml jsonschema
 
-      - name: Validate YAML files
+      - name: Validate apps against JSON Schema
         run: |
-          python -c "
+          python3 << 'EOF'
           import yaml
+          import json
           import sys
           from pathlib import Path
+          from jsonschema import validate, ValidationError, Draft7Validator
 
+          # Load schema
+          with open('schemas/app.schema.json') as f:
+              schema = json.load(f)
+
+          validator = Draft7Validator(schema)
           errors = []
-          required_fields = ['id', 'name', 'description', 'version', 'category', 'docker']
-          valid_categories = ['automation', 'media', 'monitoring', 'networking', 'security', 'storage', 'utility']
+          warnings = []
 
           for yaml_file in Path('apps').rglob('app.yaml'):
               try:
                   with open(yaml_file) as f:
                       data = yaml.safe_load(f)
 
-                  # Check required fields
-                  for field in required_fields:
-                      if field not in data:
-                          errors.append(f'{yaml_file}: Missing required field: {field}')
+                  # Validate against schema
+                  schema_errors = list(validator.iter_errors(data))
+                  for error in schema_errors:
+                      path = '.'.join(str(p) for p in error.absolute_path)
+                      if path:
+                          errors.append(f'{yaml_file}: {path}: {error.message}')
+                      else:
+                          errors.append(f'{yaml_file}: {error.message}')
 
-                  # Validate category
-                  if 'category' in data and data['category'] not in valid_categories:
-                      errors.append(f'{yaml_file}: Invalid category: {data[\"category\"]}')
+                  # Check for TODO items (warning)
+                  content = yaml_file.read_text()
+                  if 'TODO' in content:
+                      warnings.append(f'{yaml_file}: Contains TODO items')
 
-                  # Check docker image
-                  if 'docker' in data and 'image' not in data['docker']:
-                      errors.append(f'{yaml_file}: Missing docker.image')
-
-                  # Check for hardcoded secret values (not variable names)
+                  # Check for hardcoded secrets
                   if 'docker' in data and 'environment' in data['docker']:
-                      for env in data['docker']['environment']:
+                      for env in data['docker'].get('environment', []):
                           name = env.get('name', '').lower()
                           value = str(env.get('value', ''))
-                          # Flag if secret-related var has a non-empty value (empty string is OK)
                           if any(kw in name for kw in ['password', 'secret', 'api_key', 'token']):
                               if len(value) > 0:
-                                  errors.append(f'{yaml_file}: Possible hardcoded secret in {env.get(\"name\")}')
+                                  errors.append(f'{yaml_file}: Hardcoded secret in {env.get("name")}')
 
               except yaml.YAMLError as e:
                   errors.append(f'{yaml_file}: Invalid YAML: {e}')
+              except Exception as e:
+                  errors.append(f'{yaml_file}: Error: {e}')
+
+          # Print warnings
+          for warning in warnings:
+              print(f'WARNING: {warning}')
+
+          # Print errors and exit
+          if errors:
+              print('')
+              for error in errors:
+                  print(f'ERROR: {error}')
+              sys.exit(1)
+          else:
+              print('All app definitions are valid!')
+          EOF
+
+  check-docker-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Docker image tags
+        run: |
+          python3 << 'EOF'
+          import yaml
+          import sys
+          from pathlib import Path
+
+          errors = []
+          warnings = []
+
+          for yaml_file in Path('apps').rglob('app.yaml'):
+              try:
+                  with open(yaml_file) as f:
+                      data = yaml.safe_load(f)
+
+                  if 'docker' in data and 'image' in data['docker']:
+                      image = data['docker']['image']
+
+                      # Check for :latest tag
+                      if ':latest' in image:
+                          errors.append(f'{yaml_file}: Image uses :latest tag: {image}')
+
+                      # Check for untagged image
+                      elif ':' not in image:
+                          errors.append(f'{yaml_file}: Image has no version tag: {image}')
+
+                      # Valid image with tag
+                      else:
+                          print(f'OK: {yaml_file}: {image}')
+
+              except Exception as e:
+                  errors.append(f'{yaml_file}: Error: {e}')
+
+          if errors:
+              print('')
+              for error in errors:
+                  print(f'ERROR: {error}')
+              sys.exit(1)
+          else:
+              print('')
+              print('All Docker images have pinned versions!')
+          EOF
+
+  check-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate manifest.json
+        run: |
+          python3 << 'EOF'
+          import json
+          import yaml
+          import sys
+          from pathlib import Path
+
+          errors = []
+
+          # Load manifest
+          try:
+              with open('manifest.json') as f:
+                  manifest = json.load(f)
+          except Exception as e:
+              print(f'ERROR: Failed to load manifest.json: {e}')
+              sys.exit(1)
+
+          # Get apps from manifest
+          manifest_apps = {app['id']: app for app in manifest.get('apps', [])}
+
+          # Get apps from filesystem
+          fs_apps = {}
+          for yaml_file in Path('apps').rglob('app.yaml'):
+              with open(yaml_file) as f:
+                  data = yaml.safe_load(f)
+                  fs_apps[data['id']] = {
+                      'path': str(yaml_file.parent),
+                      'version': data.get('version'),
+                      'name': data.get('name')
+                  }
+
+          # Check for apps in manifest but not in filesystem
+          for app_id in manifest_apps:
+              if app_id not in fs_apps:
+                  errors.append(f'App "{app_id}" in manifest but not found in apps/')
+
+          # Check for apps in filesystem but not in manifest
+          for app_id in fs_apps:
+              if app_id not in manifest_apps:
+                  errors.append(f'App "{app_id}" found in apps/ but missing from manifest.json')
+
+          # Check version and path consistency
+          for app_id in manifest_apps:
+              if app_id in fs_apps:
+                  m_app = manifest_apps[app_id]
+                  f_app = fs_apps[app_id]
+
+                  if m_app.get('version') != f_app.get('version'):
+                      errors.append(f'App "{app_id}" version mismatch: manifest={m_app.get("version")}, app.yaml={f_app.get("version")}')
 
           if errors:
               for error in errors:
                   print(f'ERROR: {error}')
               sys.exit(1)
           else:
-              print('All app definitions are valid!')
-          "
-
-  security-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check for secrets
-        run: |
-          # Check for hardcoded secret values (actual values, not empty strings)
-          # This regex looks for value: "something" where something is non-empty
-          if grep -rE "value:\s*['\"][^'\"]+['\"]" apps/ --include="*.yaml" --include="*.yml" | grep -iE "(password|secret|api_key|token)" | grep -vE "value:\s*['\"]['\"]"; then
-            echo "WARNING: Possible hardcoded secrets detected in app definitions"
-            exit 1
-          fi
-          echo "No obvious secrets found"
-
-      - name: Validate Docker images
-        run: |
-          python3 -c "
-          import yaml
-          import sys
-          from pathlib import Path
-
-          warnings = []
-          for yaml_file in Path('apps').rglob('app.yaml'):
-              try:
-                  with open(yaml_file) as f:
-                      data = yaml.safe_load(f)
-                  if 'docker' in data and 'image' in data['docker']:
-                      image = data['docker']['image']
-                      if ':latest' in image or ':' not in image:
-                          warnings.append(f'{yaml_file}: Image uses latest or untagged version: {image}')
-              except:
-                  pass
-
-          for warning in warnings:
-              print(f'WARNING: {warning}')
-          "
+              print(f'Manifest is in sync with {len(fs_apps)} apps!')
+          EOF
