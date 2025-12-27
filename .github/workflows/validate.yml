@@ -27,6 +27,7 @@ jobs:
           import yaml
           import json
           import sys
+          import re
           from pathlib import Path
           from jsonschema import validate, ValidationError, Draft7Validator
 
@@ -37,11 +38,21 @@ jobs:
           validator = Draft7Validator(schema)
           errors = []
           warnings = []
+          seen_ids = {}
+          seen_ports = {}
 
-          for yaml_file in Path('apps').rglob('app.yaml'):
+          for yaml_file in sorted(Path('apps').rglob('app.yaml')):
               try:
                   with open(yaml_file) as f:
                       data = yaml.safe_load(f)
+
+                  app_id = data.get('id', 'unknown')
+
+                  # Check for duplicate app IDs
+                  if app_id in seen_ids:
+                      errors.append(f'{yaml_file}: Duplicate app ID "{app_id}" (also in {seen_ids[app_id]})')
+                  else:
+                      seen_ids[app_id] = str(yaml_file)
 
                   # Validate against schema
                   schema_errors = list(validator.iter_errors(data))
@@ -52,19 +63,60 @@ jobs:
                       else:
                           errors.append(f'{yaml_file}: {error.message}')
 
-                  # Check for TODO items (warning)
+                  # Check for TODO/FIXME items (now an error, not warning)
                   content = yaml_file.read_text()
-                  if 'TODO' in content:
-                      warnings.append(f'{yaml_file}: Contains TODO items')
+                  if 'TODO' in content or 'FIXME' in content:
+                      errors.append(f'{yaml_file}: Contains TODO/FIXME items - must be resolved')
 
-                  # Check for hardcoded secrets
+                  # Check for placeholder text
+                  placeholders = ['example.com', 'your-', 'changeme', 'placeholder', 'xxx', 'UPDATE THIS']
+                  for placeholder in placeholders:
+                      if placeholder.lower() in content.lower():
+                          errors.append(f'{yaml_file}: Contains placeholder text "{placeholder}"')
+
+                  # Check for hardcoded secrets (strict)
                   if 'docker' in data and 'environment' in data['docker']:
                       for env in data['docker'].get('environment', []):
                           name = env.get('name', '').lower()
                           value = str(env.get('value', ''))
-                          if any(kw in name for kw in ['password', 'secret', 'api_key', 'token']):
-                              if len(value) > 0:
-                                  errors.append(f'{yaml_file}: Hardcoded secret in {env.get("name")}')
+                          is_secret = any(kw in name for kw in [
+                              'password', 'secret', 'api_key', 'apikey', 'token',
+                              'private_key', 'privatekey', 'credential', 'auth'
+                          ])
+                          if is_secret and len(value) > 0:
+                              errors.append(f'{yaml_file}: Secret value must be empty for {env.get("name")}')
+
+                  # Check port conflicts
+                  if 'docker' in data and 'ports' in data['docker']:
+                      for port in data['docker'].get('ports', []):
+                          host_port = port.get('host')
+                          protocol = port.get('protocol', 'tcp')
+                          port_key = f"{host_port}/{protocol}"
+                          if port_key in seen_ports:
+                              warnings.append(f'{yaml_file}: Port {port_key} also used by {seen_ports[port_key]}')
+                          else:
+                              seen_ports[port_key] = app_id
+
+                  # Check for dangerous Docker options
+                  if 'docker' in data:
+                      docker = data['docker']
+                      if docker.get('privileged') == True:
+                          errors.append(f'{yaml_file}: Privileged mode is not allowed')
+                      if 'capabilities' in docker:
+                          caps = docker['capabilities']
+                          if 'SYS_ADMIN' in caps:
+                              warnings.append(f'{yaml_file}: SYS_ADMIN capability - ensure necessary')
+
+                  # Check ID matches directory name
+                  dir_name = yaml_file.parent.name
+                  if app_id != dir_name:
+                      errors.append(f'{yaml_file}: App ID "{app_id}" must match directory name "{dir_name}"')
+
+                  # Check category matches directory
+                  category = data.get('category', '')
+                  category_dir = yaml_file.parent.parent.name
+                  if category != category_dir:
+                      errors.append(f'{yaml_file}: Category "{category}" must match directory "{category_dir}"')
 
               except yaml.YAMLError as e:
                   errors.append(f'{yaml_file}: Invalid YAML: {e}')
@@ -80,9 +132,12 @@ jobs:
               print('')
               for error in errors:
                   print(f'ERROR: {error}')
+              print('')
+              print(f'Validation FAILED: {len(errors)} error(s), {len(warnings)} warning(s)')
               sys.exit(1)
           else:
-              print('All app definitions are valid!')
+              print('')
+              print(f'All {len(seen_ids)} app definitions are valid!')
           EOF
 
   check-docker-images:
@@ -95,12 +150,16 @@ jobs:
           python3 << 'EOF'
           import yaml
           import sys
+          import re
           from pathlib import Path
 
           errors = []
           warnings = []
 
-          for yaml_file in Path('apps').rglob('app.yaml'):
+          # Forbidden tags
+          FORBIDDEN_TAGS = ['latest', 'dev', 'nightly', 'edge', 'unstable', 'master', 'main', 'beta', 'alpha', 'rc']
+
+          for yaml_file in sorted(Path('apps').rglob('app.yaml')):
               try:
                   with open(yaml_file) as f:
                       data = yaml.safe_load(f)
@@ -108,20 +167,32 @@ jobs:
                   if 'docker' in data and 'image' in data['docker']:
                       image = data['docker']['image']
 
-                      # Check for :latest tag
-                      if ':latest' in image:
-                          errors.append(f'{yaml_file}: Image uses :latest tag: {image}')
-
-                      # Check for untagged image
-                      elif ':' not in image:
+                      # Check for no tag
+                      if ':' not in image:
                           errors.append(f'{yaml_file}: Image has no version tag: {image}')
+                          continue
 
-                      # Valid image with tag
+                      # Split image and tag
+                      parts = image.rsplit(':', 1)
+                      tag = parts[1] if len(parts) > 1 else ''
+
+                      # Check forbidden tags
+                      if tag.lower() in FORBIDDEN_TAGS:
+                          errors.append(f'{yaml_file}: Forbidden tag ":{tag}" - use specific version')
+                          continue
+
+                      # Check for semver-like tag
+                      semver_pattern = r'^v?[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9._-]+)?$'
+                      if not re.match(semver_pattern, tag):
+                          warnings.append(f'{yaml_file}: Tag "{tag}" not semver format')
                       else:
                           print(f'OK: {yaml_file}: {image}')
 
               except Exception as e:
                   errors.append(f'{yaml_file}: Error: {e}')
+
+          for warning in warnings:
+              print(f'WARNING: {warning}')
 
           if errors:
               print('')
@@ -130,7 +201,7 @@ jobs:
               sys.exit(1)
           else:
               print('')
-              print('All Docker images have pinned versions!')
+              print('All Docker images have properly pinned versions!')
           EOF
 
   check-manifest:
@@ -156,38 +227,65 @@ jobs:
               print(f'ERROR: Failed to load manifest.json: {e}')
               sys.exit(1)
 
+          # Validate manifest structure
+          if 'version' not in manifest:
+              errors.append('manifest.json: Missing "version" field')
+          if 'apps' not in manifest:
+              errors.append('manifest.json: Missing "apps" field')
+              print(f'ERROR: {errors[0]}')
+              sys.exit(1)
+
           # Get apps from manifest
-          manifest_apps = {app['id']: app for app in manifest.get('apps', [])}
+          manifest_apps = {}
+          for app in manifest.get('apps', []):
+              app_id = app.get('id')
+              if not app_id:
+                  errors.append('manifest.json: App entry missing "id"')
+                  continue
+              if app_id in manifest_apps:
+                  errors.append(f'manifest.json: Duplicate app ID "{app_id}"')
+              manifest_apps[app_id] = app
 
           # Get apps from filesystem
           fs_apps = {}
           for yaml_file in Path('apps').rglob('app.yaml'):
               with open(yaml_file) as f:
                   data = yaml.safe_load(f)
-                  fs_apps[data['id']] = {
-                      'path': str(yaml_file.parent),
-                      'version': data.get('version'),
-                      'name': data.get('name')
-                  }
+                  app_id = data.get('id')
+                  if app_id:
+                      fs_apps[app_id] = {
+                          'path': str(yaml_file.parent),
+                          'version': data.get('version'),
+                          'name': data.get('name'),
+                          'category': data.get('category'),
+                          'description': data.get('description')
+                      }
 
-          # Check for apps in manifest but not in filesystem
+          # Check sync
           for app_id in manifest_apps:
               if app_id not in fs_apps:
-                  errors.append(f'App "{app_id}" in manifest but not found in apps/')
+                  errors.append(f'App "{app_id}" in manifest but not in apps/')
 
-          # Check for apps in filesystem but not in manifest
           for app_id in fs_apps:
               if app_id not in manifest_apps:
-                  errors.append(f'App "{app_id}" found in apps/ but missing from manifest.json')
+                  errors.append(f'App "{app_id}" in apps/ but missing from manifest.json')
 
-          # Check version and path consistency
+          # Check field consistency
           for app_id in manifest_apps:
               if app_id in fs_apps:
-                  m_app = manifest_apps[app_id]
-                  f_app = fs_apps[app_id]
+                  m = manifest_apps[app_id]
+                  f = fs_apps[app_id]
 
-                  if m_app.get('version') != f_app.get('version'):
-                      errors.append(f'App "{app_id}" version mismatch: manifest={m_app.get("version")}, app.yaml={f_app.get("version")}')
+                  if m.get('version') != f.get('version'):
+                      errors.append(f'App "{app_id}" version mismatch')
+                  if m.get('name') != f.get('name'):
+                      errors.append(f'App "{app_id}" name mismatch')
+                  if m.get('category') != f.get('category'):
+                      errors.append(f'App "{app_id}" category mismatch')
+
+                  expected_path = f'apps/{f.get("category")}/{app_id}'
+                  if m.get('path') != expected_path:
+                      errors.append(f'App "{app_id}" path should be {expected_path}')
 
           if errors:
               for error in errors:
@@ -195,4 +293,147 @@ jobs:
               sys.exit(1)
           else:
               print(f'Manifest is in sync with {len(fs_apps)} apps!')
+          EOF
+
+  check-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Security scan
+        run: |
+          python3 << 'EOF'
+          import yaml
+          import sys
+          import re
+          from pathlib import Path
+
+          errors = []
+          warnings = []
+
+          # Patterns that indicate security issues
+          SECRET_PATTERNS = [
+              (r'ghp_[A-Za-z0-9]{36}', 'GitHub personal access token'),
+              (r'gho_[A-Za-z0-9]{36}', 'GitHub OAuth token'),
+              (r'sk-[A-Za-z0-9]{48}', 'OpenAI API key'),
+              (r'xox[baprs]-[A-Za-z0-9-]{10,}', 'Slack token'),
+              (r'eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*', 'JWT token'),
+              (r'AKIA[A-Z0-9]{16}', 'AWS access key'),
+          ]
+
+          DANGEROUS_IMAGES = ['docker:dind']
+
+          for yaml_file in sorted(Path('apps').rglob('app.yaml')):
+              try:
+                  content = yaml_file.read_text()
+                  with open(yaml_file) as f:
+                      data = yaml.safe_load(f)
+
+                  # Scan for secret patterns
+                  for pattern, desc in SECRET_PATTERNS:
+                      if re.search(pattern, content):
+                          errors.append(f'{yaml_file}: {desc} detected!')
+
+                  # Check for dangerous images
+                  if 'docker' in data:
+                      image = data['docker'].get('image', '')
+                      for dangerous in DANGEROUS_IMAGES:
+                          if dangerous in image:
+                              errors.append(f'{yaml_file}: Dangerous image {image}')
+
+                  # Check network mode
+                  if 'docker' in data:
+                      docker = data['docker']
+                      if docker.get('network_mode') == 'host':
+                          warnings.append(f'{yaml_file}: Host network mode')
+
+                  # URLs must be HTTPS
+                  for field in ['icon', 'repository', 'documentation']:
+                      url = data.get(field, '')
+                      if url and url.startswith('http://'):
+                          errors.append(f'{yaml_file}: {field} must use HTTPS')
+
+              except Exception as e:
+                  errors.append(f'{yaml_file}: Error: {e}')
+
+          for warning in warnings:
+              print(f'WARNING: {warning}')
+
+          if errors:
+              print('')
+              for error in errors:
+                  print(f'ERROR: {error}')
+              sys.exit(1)
+          else:
+              print('Security scan passed!')
+          EOF
+
+  check-urls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify URLs are reachable
+        run: |
+          python3 << 'EOF'
+          import yaml
+          import sys
+          import urllib.request
+          import urllib.error
+          from pathlib import Path
+
+          errors = []
+          warnings = []
+          checked = set()
+
+          for yaml_file in sorted(Path('apps').rglob('app.yaml')):
+              try:
+                  with open(yaml_file) as f:
+                      data = yaml.safe_load(f)
+
+                  for field in ['icon', 'repository', 'documentation']:
+                      url = data.get(field, '')
+                      if not url or url in checked:
+                          continue
+                      checked.add(url)
+
+                      try:
+                          req = urllib.request.Request(url, method='HEAD')
+                          req.add_header('User-Agent', 'Homelab-Marketplace-Validator/1.0')
+                          with urllib.request.urlopen(req, timeout=10) as response:
+                              if response.status == 200:
+                                  print(f'OK: {field}: {url}')
+                              else:
+                                  warnings.append(f'{yaml_file}: {field} status {response.status}')
+                      except urllib.error.HTTPError as e:
+                          if e.code == 405:
+                              try:
+                                  req = urllib.request.Request(url)
+                                  req.add_header('User-Agent', 'Homelab-Marketplace-Validator/1.0')
+                                  with urllib.request.urlopen(req, timeout=10) as response:
+                                      print(f'OK: {field}: {url}')
+                              except Exception:
+                                  errors.append(f'{yaml_file}: {field} not reachable: {url}')
+                          elif e.code == 404:
+                              errors.append(f'{yaml_file}: {field} not found (404): {url}')
+                          else:
+                              warnings.append(f'{yaml_file}: {field} HTTP {e.code}: {url}')
+                      except urllib.error.URLError as e:
+                          errors.append(f'{yaml_file}: {field} not reachable: {url}')
+                      except Exception as e:
+                          warnings.append(f'{yaml_file}: {field} error: {url}')
+
+              except Exception as e:
+                  errors.append(f'{yaml_file}: Error: {e}')
+
+          for warning in warnings:
+              print(f'WARNING: {warning}')
+
+          if errors:
+              print('')
+              for error in errors:
+                  print(f'ERROR: {error}')
+              sys.exit(1)
+          else:
+              print(f'All URLs verified ({len(checked)} checked)!')
           EOF

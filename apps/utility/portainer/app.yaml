@@ -1,6 +1,6 @@
 id: portainer
 name: Portainer CE
-description: Lightweight container management UI for Docker and Kubernetes
+description: Lightweight container management UI for Docker and Kubernetes.
 version: "1.0.0"
 category: utility
 tags:

@@ -4,75 +4,97 @@
   "title": "Homelab Marketplace App",
   "description": "Schema for app.yaml definitions in the Homelab Marketplace",
   "type": "object",
-  "required": ["id", "name", "description", "version", "category", "docker", "requirements"],
+  "additionalProperties": false,
+  "required": ["id", "name", "description", "version", "category", "tags", "icon", "repository", "documentation", "docker", "requirements"],
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9-]*$",
-      "description": "Unique lowercase identifier for the app"
+      "pattern": "^[a-z][a-z0-9-]{1,48}$",
+      "minLength": 2,
+      "maxLength": 50,
+      "description": "Unique lowercase identifier (2-50 chars, lowercase letters, numbers, hyphens)"
     },
     "name": {
       "type": "string",
-      "minLength": 1,
+      "minLength": 2,
       "maxLength": 50,
-      "description": "Display name for the app"
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._-]*$",
+      "description": "Display name (2-50 chars, alphanumeric start)"
     },
     "description": {
       "type": "string",
-      "minLength": 10,
+      "minLength": 20,
       "maxLength": 200,
-      "description": "Brief description of the app"
+      "pattern": "^[A-Z].*[.!]$",
+      "description": "Brief description (20-200 chars, starts with capital, ends with punctuation)"
     },
     "version": {
       "type": "string",
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "description": "Semantic version of the app definition"
+      "description": "Semantic version (X.Y.Z format)"
     },
     "category": {
       "type": "string",
       "enum": ["automation", "media", "monitoring", "networking", "security", "storage", "utility"],
-      "description": "Category for the app"
+      "description": "App category"
     },
     "tags": {
       "type": "array",
       "items": {
         "type": "string",
-        "pattern": "^[a-z][a-z0-9-]*$"
+        "pattern": "^[a-z][a-z0-9-]{1,29}$",
+        "minLength": 2,
+        "maxLength": 30
       },
       "minItems": 1,
-      "description": "Tags for filtering and discovery"
+      "maxItems": 10,
+      "uniqueItems": true,
+      "description": "Tags for filtering (1-10 unique tags, lowercase)"
     },
     "icon": {
       "type": "string",
       "format": "uri",
-      "description": "URL to the app icon"
+      "pattern": "^https://.*\\.(svg|png|jpg|jpeg|webp|ico)$",
+      "description": "HTTPS URL to app icon (svg, png, jpg, webp, ico)"
     },
     "repository": {
       "type": "string",
       "format": "uri",
-      "description": "URL to the source repository"
+      "pattern": "^https://(github\\.com|gitlab\\.com|bitbucket\\.org|codeberg\\.org)/.*$",
+      "description": "HTTPS URL to source repository (GitHub, GitLab, Bitbucket, Codeberg)"
     },
     "documentation": {
       "type": "string",
       "format": "uri",
-      "description": "URL to the official documentation"
+      "pattern": "^https://.*$",
+      "description": "HTTPS URL to official documentation"
     },
     "docker": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["image"],
       "properties": {
         "image": {
           "type": "string",
-          "pattern": "^[a-z0-9._/-]+:[a-z0-9._-]+$",
+          "pattern": "^[a-z0-9][a-z0-9._/-]*:[a-z0-9][a-z0-9._-]*$",
           "not": {
-            "pattern": ":latest$"
+            "anyOf": [
+              { "pattern": ":latest$" },
+              { "pattern": ":dev$" },
+              { "pattern": ":nightly$" },
+              { "pattern": ":edge$" },
+              { "pattern": ":unstable$" },
+              { "pattern": ":master$" },
+              { "pattern": ":main$" }
+            ]
           },
-          "description": "Docker image with pinned version (not :latest)"
+          "description": "Docker image with pinned version (no latest/dev/nightly/edge/unstable/master/main)"
         },
         "ports": {
           "type": "array",
           "items": {
             "type": "object",
+            "additionalProperties": false,
             "required": ["container", "host", "protocol", "description"],
             "properties": {
               "container": {
@@ -83,89 +105,172 @@
               "host": {
                 "type": "integer",
                 "minimum": 1,
-                "maximum": 65535
+                "maximum": 65535,
+                "description": "Host port (privileged ports <1024 require root)"
               },
               "protocol": {
                 "type": "string",
                 "enum": ["tcp", "udp"]
               },
               "description": {
-                "type": "string"
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 100
               }
             }
-          }
+          },
+          "minItems": 1,
+          "maxItems": 20
         },
         "volumes": {
           "type": "array",
           "items": {
             "type": "object",
+            "additionalProperties": false,
             "required": ["container", "host", "mode", "description"],
             "properties": {
               "container": {
                 "type": "string",
-                "pattern": "^/"
+                "pattern": "^/[a-zA-Z0-9._/-]+$",
+                "minLength": 2,
+                "maxLength": 200
               },
               "host": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(\\.?/[a-zA-Z0-9._-]+)+$|^\\$\\{[A-Z_]+\\}.*$",
+                "minLength": 1,
+                "maxLength": 200,
+                "description": "Host path (relative ./path or absolute /path or variable ${VAR})"
               },
               "mode": {
                 "type": "string",
                 "enum": ["rw", "ro"]
               },
               "description": {
-                "type": "string"
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 100
               }
             }
-          }
+          },
+          "minItems": 1,
+          "maxItems": 20
         },
         "environment": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["name", "description"],
+            "additionalProperties": false,
+            "required": ["name", "description", "required"],
             "properties": {
               "name": {
                 "type": "string",
-                "pattern": "^[A-Z][A-Z0-9_]*$"
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Environment variable name"
               },
               "value": {
-                "type": "string"
+                "type": "string",
+                "maxLength": 1000,
+                "description": "Default value (empty string for secrets user must provide)"
               },
               "required": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Whether this variable must be set by user"
               },
               "description": {
-                "type": "string"
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 200
               }
             }
-          }
+          },
+          "maxItems": 50
+        },
+        "networks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "maxItems": 5,
+          "uniqueItems": true,
+          "description": "Docker networks to join"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["NET_ADMIN", "NET_RAW", "SYS_ADMIN", "SYS_PTRACE", "SYS_TIME", "NET_BIND_SERVICE"]
+          },
+          "maxItems": 6,
+          "uniqueItems": true,
+          "description": "Linux capabilities (use sparingly)"
+        },
+        "privileged": {
+          "type": "boolean",
+          "const": false,
+          "description": "Privileged mode (must be false)"
+        },
+        "restart": {
+          "type": "string",
+          "enum": ["no", "always", "on-failure", "unless-stopped"],
+          "default": "unless-stopped"
         }
       }
     },
     "requirements": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["memory", "cpu", "storage"],
       "properties": {
         "memory": {
           "type": "string",
-          "pattern": "^[0-9]+(MB|GB)$",
-          "description": "Minimum RAM required"
+          "pattern": "^(12[89]|1[3-9][0-9]|[2-9][0-9]{2}|[1-9][0-9]{3,4})MB$|^([1-9]|[1-5][0-9]|6[0-4])GB$",
+          "description": "Minimum RAM (128MB-64GB)"
         },
         "cpu": {
           "type": "string",
-          "pattern": "^[0-9]+(\\.[0-9]+)?$",
-          "description": "Minimum CPU cores"
+          "pattern": "^(0\\.[1-9]|[1-9](\\.[0-9])?|1[0-6])$",
+          "description": "Minimum CPU cores (0.1-16)"
         },
         "storage": {
           "type": "string",
-          "pattern": "^[0-9]+(MB|GB|TB)$",
-          "description": "Minimum storage required"
+          "pattern": "^([1-9][0-9]{0,2}|[1-9][0-9]{3})MB$|^([1-9][0-9]{0,2})GB$|^([1-9])TB$",
+          "description": "Minimum storage (1MB-9TB)"
+        },
+        "arch": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["amd64", "arm64", "arm/v7"]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Supported architectures"
         }
       }
     },
     "featured": {
       "type": "boolean",
       "description": "Whether the app is featured on the homepage"
+    },
+    "deprecated": {
+      "type": "boolean",
+      "description": "Whether the app is deprecated"
+    },
+    "maintainers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^@[a-zA-Z0-9_-]+$",
+        "description": "GitHub username with @ prefix"
+      },
+      "minItems": 1,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "description": "GitHub usernames of maintainers"
     }
   }
 }

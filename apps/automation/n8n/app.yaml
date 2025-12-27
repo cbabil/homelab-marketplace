@@ -1,6 +1,6 @@
 id: n8n
 name: n8n
-description: Workflow automation tool for connecting apps and automating tasks
+description: Workflow automation tool for connecting apps and automating tasks.
 version: "1.0.0"
 category: automation
 tags:

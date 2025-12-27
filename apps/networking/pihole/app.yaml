@@ -1,6 +1,6 @@
 id: pihole
 name: Pi-hole
-description: Network-wide ad blocking via your own DNS server
+description: Network-wide ad blocking via your own DNS server.
 version: "1.0.0"
 category: networking
 tags:

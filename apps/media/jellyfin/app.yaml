@@ -1,7 +1,7 @@
 id: jellyfin
 name: Jellyfin
-description: Free and open-source media server for streaming movies, TV shows, and music
-version: "10.9.0"
+description: Free and open-source media server for streaming movies, TV shows, and music.
+version: "1.0.0"
 category: media
 tags:
   - streaming
