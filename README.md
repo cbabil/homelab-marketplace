@@ -1,5 +1,12 @@
 # Homelab Marketplace
 
+[![Validate Apps](https://github.com/cbabil/homelab-marketplace/actions/workflows/validate.yml/badge.svg)](https://github.com/cbabil/homelab-marketplace/actions/workflows/validate.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/cbabil/homelab-marketplace)](https://github.com/cbabil/homelab-marketplace/stargazers)
+[![GitHub last commit](https://img.shields.io/github/last-commit/cbabil/homelab-marketplace)](https://github.com/cbabil/homelab-marketplace/commits)
+[![GitHub issues](https://img.shields.io/github/issues/cbabil/homelab-marketplace)](https://github.com/cbabil/homelab-marketplace/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/cbabil/homelab-marketplace)](https://github.com/cbabil/homelab-marketplace/pulls)
+
 Curated Docker app definitions for [Homelab Assistant](https://github.com/cbabil/homelab).
 
 ## Quick Start
