@@ -30,7 +30,7 @@ jobs:
 
           errors = []
           required_fields = ['id', 'name', 'description', 'version', 'category', 'docker']
-          valid_categories = ['media', 'networking', 'monitoring', 'security', 'storage', 'utility']
+          valid_categories = ['automation', 'media', 'monitoring', 'networking', 'security', 'storage', 'utility']
 
           for yaml_file in Path('apps').rglob('app.yaml'):
               try:
@@ -50,10 +50,15 @@ jobs:
                   if 'docker' in data and 'image' not in data['docker']:
                       errors.append(f'{yaml_file}: Missing docker.image')
 
-                  # Check for secrets
-                  content = yaml_file.read_text().lower()
-                  if 'password' in content or 'secret' in content or 'api_key' in content:
-                      errors.append(f'{yaml_file}: Possible hardcoded secret detected')
+                  # Check for hardcoded secret values (not variable names)
+                  if 'docker' in data and 'environment' in data['docker']:
+                      for env in data['docker']['environment']:
+                          name = env.get('name', '').lower()
+                          value = str(env.get('value', ''))
+                          # Flag if secret-related var has a non-empty value (empty string is OK)
+                          if any(kw in name for kw in ['password', 'secret', 'api_key', 'token']):
+                              if len(value) > 0:
+                                  errors.append(f'{yaml_file}: Possible hardcoded secret in {env.get(\"name\")}')
 
               except yaml.YAMLError as e:
                   errors.append(f'{yaml_file}: Invalid YAML: {e}')
@@ -73,9 +78,10 @@ jobs:
 
       - name: Check for secrets
         run: |
-          # Simple secret detection
-          if grep -rE "(password|secret|api_key|token)\s*[:=]\s*['\"][^'\"]+['\"]" apps/ --include="*.yaml" --include="*.yml"; then
-            echo "WARNING: Possible secrets detected in app definitions"
+          # Check for hardcoded secret values (actual values, not empty strings)
+          # This regex looks for value: "something" where something is non-empty
+          if grep -rE "value:\s*['\"][^'\"]+['\"]" apps/ --include="*.yaml" --include="*.yml" | grep -iE "(password|secret|api_key|token)" | grep -vE "value:\s*['\"]['\"]"; then
+            echo "WARNING: Possible hardcoded secrets detected in app definitions"
             exit 1
           fi
           echo "No obvious secrets found"

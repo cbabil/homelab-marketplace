@@ -1,0 +1,55 @@
+id: pihole
+name: Pi-hole
+description: Network-wide ad blocking via your own DNS server
+version: "1.0.0"
+category: networking
+tags:
+  - dns
+  - ad-blocking
+  - privacy
+  - network
+
+icon: https://pi-hole.net/wp-content/uploads/2016/12/Vortex-R.png
+repository: https://github.com/pi-hole/pi-hole
+documentation: https://docs.pi-hole.net/
+
+docker:
+  image: pihole/pihole:2024.07.0
+  ports:
+    - container: 53
+      host: 53
+      protocol: tcp
+      description: DNS (TCP)
+    - container: 53
+      host: 53
+      protocol: udp
+      description: DNS (UDP)
+    - container: 80
+      host: 8080
+      protocol: tcp
+      description: Web UI
+  volumes:
+    - container: /etc/pihole
+      host: ./etc-pihole
+      mode: rw
+      description: Pi-hole configuration
+    - container: /etc/dnsmasq.d
+      host: ./etc-dnsmasq.d
+      mode: rw
+      description: DNS configuration
+  environment:
+    - name: TZ
+      value: UTC
+      required: false
+      description: Timezone
+    - name: WEBPASSWORD
+      value: ""
+      required: true
+      description: Admin password for web interface
+
+requirements:
+  memory: "512MB"
+  cpu: "1"
+  storage: "1GB"
+
+featured: true

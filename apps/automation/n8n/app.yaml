@@ -1,0 +1,47 @@
+id: n8n
+name: n8n
+description: Workflow automation tool for connecting apps and automating tasks
+version: "1.0.0"
+category: automation
+tags:
+  - automation
+  - workflow
+  - integration
+  - no-code
+
+icon: https://n8n.io/favicon.ico
+repository: https://github.com/n8n-io/n8n
+documentation: https://docs.n8n.io/
+
+docker:
+  image: n8nio/n8n:1.70.3
+  ports:
+    - container: 5678
+      host: 5678
+      protocol: tcp
+      description: Web UI
+  volumes:
+    - container: /home/node/.n8n
+      host: ./data
+      mode: rw
+      description: Workflow data and SQLite database
+  environment:
+    - name: TZ
+      value: UTC
+      required: false
+      description: Timezone
+    - name: N8N_SECURE_COOKIE
+      value: "false"
+      required: false
+      description: Set to true if using HTTPS
+    - name: WEBHOOK_URL
+      value: ""
+      required: false
+      description: Public URL for webhooks
+
+requirements:
+  memory: "1GB"
+  cpu: "1"
+  storage: "2GB"
+
+featured: true
