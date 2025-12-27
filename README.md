@@ -6,6 +6,17 @@ Community marketplace for homelab applications - discover, share, and install ap
 
 This repository contains curated application definitions for the [Homelab Assistant](https://github.com/cbabil/homelab). Each app is defined in YAML format and can be easily deployed to your homelab environment.
 
+## Available Apps
+
+| App | Version | Category | Description |
+|-----|---------|----------|-------------|
+| [Jellyfin](apps/media/jellyfin) | 1.0.0 | media | Free and open-source media server for streaming movies, TV shows, and music |
+| [Pi-hole](apps/networking/pihole) | 1.0.0 | networking | Network-wide ad blocking via your own DNS server |
+| [n8n](apps/automation/n8n) | 1.0.0 | automation | Workflow automation tool for connecting apps and automating tasks |
+| [Portainer CE](apps/utility/portainer) | 1.0.0 | utility | Lightweight container management UI for Docker and Kubernetes |
+
+> See [Releases](https://github.com/cbabil/homelab-marketplace/releases) for downloadable app packages.
+
 ## Repository Structure
 
 ```

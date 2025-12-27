@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create individual app zips from manifest
+        run: |
+          mkdir -p dist
+
+          # Read manifest and create zips for each app
+          node -e "
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+
+          const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+
+          manifest.apps.forEach(app => {
+            const zipName = \`\${app.id}-\${app.version}.zip\`;
+            console.log(\`Creating \${zipName}...\`);
+            execSync(\`cd \${app.path} && zip -r ../../../dist/\${zipName} .\`);
+          });
+
+          console.log('All app zips created successfully!');
+          "
+
+          ls -la dist/
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="${LAST_TAG}..HEAD"
+          fi
+
+          {
+            echo "notes<<EOF"
+
+            echo "## Apps in this release"
+            echo ""
+            node -e "
+            const manifest = JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'));
+            manifest.apps.forEach(app => {
+              console.log(\`- **\${app.name}** v\${app.version} - \${app.description}\`);
+            });
+            "
+            echo ""
+
+            FEATURES=$(git log $RANGE --pretty=format:"- %s" --grep="^feat" 2>/dev/null || true)
+            if [ -n "$FEATURES" ]; then
+              echo "## Features"
+              echo "$FEATURES"
+              echo ""
+            fi
+
+            FIXES=$(git log $RANGE --pretty=format:"- %s" --grep="^fix" 2>/dev/null || true)
+            if [ -n "$FIXES" ]; then
+              echo "## Bug Fixes"
+              echo "$FIXES"
+              echo ""
+            fi
+
+            OTHERS=$(git log $RANGE --pretty=format:"- %s" --grep="^chore\|^docs" 2>/dev/null || true)
+            if [ -n "$OTHERS" ]; then
+              echo "## Other Changes"
+              echo "$OTHERS"
+            fi
+
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+
+          # Delete existing release and tag if exists
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release delete "$TAG" -y
+            git push origin :refs/tags/"$TAG" || true
+          fi
+
+          # Create release with all app zips
+          gh release create "$TAG" dist/*.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" \
+            --notes "${{ steps.notes.outputs.notes }}" \
+            --latest
