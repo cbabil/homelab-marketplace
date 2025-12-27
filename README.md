@@ -10,6 +10,9 @@ homelab install pihole
 
 # Add a new app
 ./scripts/create-app.sh <category> <app-id>
+
+# Validate an app
+./scripts/validate-app.sh <app-id>
 ```
 
 ## Apps
