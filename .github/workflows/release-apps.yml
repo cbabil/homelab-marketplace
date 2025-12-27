@@ -23,29 +23,21 @@ jobs:
       - name: Create individual app zips from manifest
         run: |
           mkdir -p dist
-
-          # Read manifest and create zips for each app
           node -e "
           const fs = require('fs');
           const { execSync } = require('child_process');
-
           const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
-
           manifest.apps.forEach(app => {
-            const zipName = \`\${app.id}-\${app.version}.zip\`;
-            console.log(\`Creating \${zipName}...\`);
-            execSync(\`cd \${app.path} && zip -r ../../../dist/\${zipName} .\`);
+            const zipName = app.id + '-' + app.version + '.zip';
+            console.log('Creating ' + zipName + '...');
+            execSync('cd ' + app.path + ' && zip -r ../../../dist/' + zipName + ' .');
           });
-
           console.log('All app zips created successfully!');
           "
-
           ls -la dist/
 
       - name: Generate release notes file
-        id: notes
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
           TAG="${{ steps.version.outputs.tag }}"
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [ -z "$LAST_TAG" ]; then
@@ -53,80 +45,63 @@ jobs:
           else
             RANGE="${LAST_TAG}..HEAD"
           fi
-
-          # Generate RELEASE_NOTES.md file
-          cat > dist/RELEASE_NOTES.md << HEADER
-# Homelab Marketplace $TAG
-
-Released: $(date +%Y-%m-%d)
-
-## Apps Included
-
-| App | Version | Category | Download |
-|-----|---------|----------|----------|
-HEADER
-
-          # Add app table rows
-          node -e "
-          const manifest = JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'));
-          manifest.apps.forEach(app => {
-            const zip = \`\${app.id}-\${app.version}.zip\`;
-            console.log(\`| \${app.name} | \${app.version} | \${app.category} | [\${zip}](\${zip}) |\`);
-          });
-          " >> dist/RELEASE_NOTES.md
-
-          # Add app details
-          cat >> dist/RELEASE_NOTES.md << 'DETAILS'
-
-## App Details
-
-DETAILS
+          export RANGE
+          export TAG
 
           node -e "
-          const manifest = JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'));
+          const fs = require('fs');
+          const { execSync } = require('child_process');
+          const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+          const tag = process.env.TAG;
+          const range = process.env.RANGE;
+          const date = new Date().toISOString().split('T')[0];
+
+          let notes = '# Homelab Marketplace ' + tag + '\n\n';
+          notes += 'Released: ' + date + '\n\n';
+          notes += '## Apps Included\n\n';
+          notes += '| App | Version | Category | Download |\n';
+          notes += '|-----|---------|----------|----------|\n';
+
           manifest.apps.forEach(app => {
-            console.log(\`### \${app.name}\n\`);
-            console.log(\`\${app.description}\n\`);
-            console.log(\`- **Version:** \${app.version}\`);
-            console.log(\`- **Category:** \${app.category}\`);
-            console.log(\`- **Path:** \${app.path}\`);
-            console.log('');
+            const zip = app.id + '-' + app.version + '.zip';
+            notes += '| ' + app.name + ' | ' + app.version + ' | ' + app.category + ' | [' + zip + '](' + zip + ') |\n';
           });
-          " >> dist/RELEASE_NOTES.md
 
-          # Add changelog section
-          echo "## Changelog" >> dist/RELEASE_NOTES.md
-          echo "" >> dist/RELEASE_NOTES.md
+          notes += '\n## App Details\n\n';
+          manifest.apps.forEach(app => {
+            notes += '### ' + app.name + '\n\n';
+            notes += app.description + '\n\n';
+            notes += '- **Version:** ' + app.version + '\n';
+            notes += '- **Category:** ' + app.category + '\n';
+            notes += '- **Path:** ' + app.path + '\n\n';
+          });
 
-          FEATURES=$(git log $RANGE --pretty=format:"- %s" --grep="^feat" 2>/dev/null || true)
-          if [ -n "$FEATURES" ]; then
-            echo "### Features" >> dist/RELEASE_NOTES.md
-            echo "$FEATURES" >> dist/RELEASE_NOTES.md
-            echo "" >> dist/RELEASE_NOTES.md
-          fi
+          notes += '## Changelog\n\n';
 
-          FIXES=$(git log $RANGE --pretty=format:"- %s" --grep="^fix" 2>/dev/null || true)
-          if [ -n "$FIXES" ]; then
-            echo "### Bug Fixes" >> dist/RELEASE_NOTES.md
-            echo "$FIXES" >> dist/RELEASE_NOTES.md
-            echo "" >> dist/RELEASE_NOTES.md
-          fi
+          try {
+            const features = execSync('git log ' + range + ' --pretty=format:\"- %s\" --grep=\"^feat\" 2>/dev/null || true', {encoding: 'utf8'}).trim();
+            if (features) {
+              notes += '### Features\n' + features + '\n\n';
+            }
+          } catch(e) {}
 
-          OTHERS=$(git log $RANGE --pretty=format:"- %s" --grep="^chore\|^docs" 2>/dev/null || true)
-          if [ -n "$OTHERS" ]; then
-            echo "### Other Changes" >> dist/RELEASE_NOTES.md
-            echo "$OTHERS" >> dist/RELEASE_NOTES.md
-            echo "" >> dist/RELEASE_NOTES.md
-          fi
+          try {
+            const fixes = execSync('git log ' + range + ' --pretty=format:\"- %s\" --grep=\"^fix\" 2>/dev/null || true', {encoding: 'utf8'}).trim();
+            if (fixes) {
+              notes += '### Bug Fixes\n' + fixes + '\n\n';
+            }
+          } catch(e) {}
 
-          # Output notes for GitHub release body
-          {
-            echo "notes<<EOF"
-            cat dist/RELEASE_NOTES.md
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
+          try {
+            const others = execSync('git log ' + range + ' --pretty=format:\"- %s\" --grep=\"^chore\" 2>/dev/null || true', {encoding: 'utf8'}).trim();
+            if (others) {
+              notes += '### Other Changes\n' + others + '\n\n';
+            }
+          } catch(e) {}
 
-          cat dist/RELEASE_NOTES.md
+          fs.writeFileSync('dist/RELEASE_NOTES.md', notes);
+          console.log(notes);
+          "
 
       - name: Create GitHub Release
         env:
@@ -134,16 +109,13 @@ DETAILS
         run: |
           TAG="${{ steps.version.outputs.tag }}"
 
-          # Delete existing release and tag if exists
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release delete "$TAG" -y
-            git push origin :refs/tags/"$TAG" || true
+            git push origin ":refs/tags/$TAG" || true
           fi
 
-          # Create release with all app zips and release notes
           gh release create "$TAG" dist/*.zip dist/RELEASE_NOTES.md \
             --repo "$GITHUB_REPOSITORY" \
             --title "$TAG" \
             --notes-file dist/RELEASE_NOTES.md \
             --latest
-
