@@ -8,20 +8,18 @@ tags:
   - agent
   - monitoring
   - management
-  - orchestration
 
-icon: https://raw.githubusercontent.com/cbabil/homelab-marketplace/main/assets/icons/homelab-agent.svg
+icon: https://raw.githubusercontent.com/cbabil/homelab-marketplace/master/assets/icons/agent.svg
 repository: https://github.com/cbabil/homelab-marketplace
-documentation: https://github.com/cbabil/homelab-marketplace/tree/main/apps/utility/homelab-agent
+documentation: https://github.com/cbabil/homelab-marketplace/wiki/Homelab-Agent
 
 docker:
-  image: alpine:latest
-  command: sh -c "while true; do sleep 3600; done"
+  image: alpine:3.19
   ports:
     - container: 8080
       host: 8080
       protocol: tcp
-      description: Agent API (placeholder)
+      description: Agent API endpoint
   volumes:
     - container: /data
       host: ./data
@@ -37,14 +35,14 @@ docker:
       required: true
       description: Registration code from Homelab server
     - name: TZ
-      value: UTC
+      value: "UTC"
       required: false
-      description: Timezone
+      description: Timezone for the agent container
 
 requirements:
-  memory: "32MB"
+  memory: "128MB"
   cpu: "0.1"
-  storage: "50MB"
+  storage: "100MB"
 
 featured: false
 
