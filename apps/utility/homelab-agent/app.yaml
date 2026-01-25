@@ -15,7 +15,7 @@ documentation: https://github.com/cbabil/homelab-marketplace/wiki/Homelab-Agent
 
 docker:
   image: alpine:3.19
-  command: sh -c "while true; do sleep 3600; done"
+  command: sleep infinity
   ports:
     - container: 8080
       host: 8080
