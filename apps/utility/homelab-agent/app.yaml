@@ -9,7 +9,7 @@ tags:
   - monitoring
   - management
 
-icon: https://raw.githubusercontent.com/cbabil/homelab-marketplace/dev/assets/icons/agent.svg
+icon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/homeassistant.svg
 repository: https://github.com/cbabil/homelab-marketplace
 documentation: https://github.com/cbabil/homelab-marketplace/wiki/Homelab-Agent
 
