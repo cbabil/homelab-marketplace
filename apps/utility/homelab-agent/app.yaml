@@ -16,11 +16,6 @@ documentation: https://github.com/cbabil/homelab-marketplace/wiki/Homelab-Agent
 docker:
   image: alpine:3.19
   command: sleep infinity
-  ports:
-    - container: 8080
-      host: 8080
-      protocol: tcp
-      description: Agent API endpoint
   volumes:
     - container: /data
       host: ./data
@@ -49,8 +44,3 @@ featured: false
 
 maintainers:
   - "@cbabil"
-
-healthcheck:
-  endpoint: /health
-  port: 8080
-  protocol: http
