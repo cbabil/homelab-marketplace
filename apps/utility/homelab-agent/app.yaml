@@ -1,0 +1,46 @@
+id: homelab-agent
+name: Homelab Agent
+description: Agent for remote server management, monitoring, and deployment orchestration.
+version: "1.0.0"
+category: utility
+author: homelab
+tags:
+  - agent
+  - monitoring
+  - management
+
+icon: https://raw.githubusercontent.com/cbabil/homelab-marketplace/master/assets/icons/agent.svg
+repository: https://github.com/cbabil/homelab-marketplace
+documentation: https://github.com/cbabil/homelab-marketplace/wiki/Homelab-Agent
+
+docker:
+  image: alpine:3.19
+  command: sleep infinity
+  volumes:
+    - container: /data
+      host: ./data
+      mode: rw
+      description: Agent data and configuration
+  environment:
+    - name: HOMELAB_SERVER_URL
+      value: ""
+      required: true
+      description: URL of the Homelab backend server
+    - name: AGENT_REGISTRATION_CODE
+      value: ""
+      required: true
+      description: Registration code from Homelab server
+    - name: TZ
+      value: "UTC"
+      required: false
+      description: Timezone for the agent container
+
+requirements:
+  memory: "128MB"
+  cpu: "0.1"
+  storage: "100MB"
+
+featured: false
+
+maintainers:
+  - "@cbabil"
