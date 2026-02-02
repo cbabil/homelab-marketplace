@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Create a new app scaffold for the Homelab Marketplace
+# Create a new app scaffold for the Tomo Marketplace
 #
 # Usage: ./scripts/create-app.sh <app-id> <category>
 #
@@ -116,4 +116,4 @@ echo "6. Run validation: ./scripts/validate-app.sh $APP_ID"
 echo "7. Update manifest.json to include the new app"
 echo "8. Create a PR with your changes"
 echo ""
-echo -e "${GREEN}Documentation: https://github.com/cbabil/homelab-marketplace/blob/master/CONTRIBUTING.md${NC}"
+echo -e "${GREEN}Documentation: https://github.com/cbabil/tomo-marketplace/blob/master/CONTRIBUTING.md${NC}"

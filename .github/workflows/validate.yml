@@ -399,7 +399,7 @@ jobs:
 
                       try:
                           req = urllib.request.Request(url, method='HEAD')
-                          req.add_header('User-Agent', 'Homelab-Marketplace-Validator/1.0')
+                          req.add_header('User-Agent', 'Tomo-Marketplace-Validator/1.0')
                           with urllib.request.urlopen(req, timeout=10) as response:
                               if response.status == 200:
                                   print(f'OK: {field}: {url}')
@@ -409,7 +409,7 @@ jobs:
                           if e.code == 405:
                               try:
                                   req = urllib.request.Request(url)
-                                  req.add_header('User-Agent', 'Homelab-Marketplace-Validator/1.0')
+                                  req.add_header('User-Agent', 'Tomo-Marketplace-Validator/1.0')
                                   with urllib.request.urlopen(req, timeout=10) as response:
                                       print(f'OK: {field}: {url}')
                               except Exception:

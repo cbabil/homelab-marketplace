@@ -53,7 +53,7 @@ body:
     id: why
     attributes:
       label: Why Add This App?
-      description: Why would this be useful for homelab users?
+      description: Why would this be useful for tomo users?
     validations:
       required: true
 

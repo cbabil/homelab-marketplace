@@ -2,12 +2,12 @@
   "version": "0.3.0",
   "apps": [
     {
-      "id": "homelab-agent",
-      "name": "Homelab Agent",
+      "id": "tomo-agent",
+      "name": "Tomo Agent",
       "version": "1.0.0",
       "category": "utility",
       "description": "Agent for remote server management, monitoring, and deployment orchestration.",
-      "path": "apps/utility/homelab-agent"
+      "path": "apps/utility/tomo-agent"
     }
   ]
 }

@@ -1,6 +1,6 @@
-# Contributing to Homelab Marketplace
+# Contributing to Tomo Marketplace
 
-Thank you for your interest in contributing to the Homelab Marketplace! This guide will help you submit apps that meet our quality standards.
+Thank you for your interest in contributing to the Tomo Marketplace! This guide will help you submit apps that meet our quality standards.
 
 ## Quick Start
 
@@ -8,8 +8,8 @@ The fastest way to add a new app:
 
 ```bash
 # Clone the repo
-git clone https://github.com/cbabil/homelab-marketplace.git
-cd homelab-marketplace
+git clone https://github.com/cbabil/tomo-marketplace.git
+cd tomo-marketplace
 
 # Create app scaffold
 ./scripts/create-app.sh myapp media
@@ -33,8 +33,8 @@ git push origin add-myapp
 
 ```bash
 # Fork on GitHub, then clone your fork
-git clone https://github.com/YOUR_USERNAME/homelab-marketplace.git
-cd homelab-marketplace
+git clone https://github.com/YOUR_USERNAME/tomo-marketplace.git
+cd tomo-marketplace
 ```
 
 ### Step 2: Create App Scaffold
@@ -278,8 +278,8 @@ All checks must pass before merging.
 
 ## Getting Help
 
-- **Questions**: Open a [Discussion](https://github.com/cbabil/homelab-marketplace/discussions)
-- **Bugs**: Open an [Issue](https://github.com/cbabil/homelab-marketplace/issues)
+- **Questions**: Open a [Discussion](https://github.com/cbabil/tomo-marketplace/discussions)
+- **Bugs**: Open an [Issue](https://github.com/cbabil/tomo-marketplace/issues)
 - **Chat**: Join our community discussions
 
 ## Code of Conduct

@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/cbabil/homelab-marketplace/schemas/app.schema.json",
-  "title": "Homelab Marketplace App",
-  "description": "Schema for app.yaml definitions in the Homelab Marketplace",
+  "$id": "https://github.com/cbabil/tomo-marketplace/schemas/app.schema.json",
+  "title": "Tomo Marketplace App",
+  "description": "Schema for app.yaml definitions in the Tomo Marketplace",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "name", "description", "version", "category", "author", "tags", "icon", "repository", "documentation", "docker", "requirements", "maintainers"],

@@ -56,7 +56,7 @@ jobs:
           const range = process.env.RANGE;
           const date = new Date().toISOString().split('T')[0];
 
-          let notes = '# Homelab Marketplace ' + tag + '\n\n';
+          let notes = '# Tomo Marketplace ' + tag + '\n\n';
           notes += 'Released: ' + date + '\n\n';
           notes += '## Apps Included\n\n';
           notes += '| App | Version | Category | Download |\n';

@@ -24,7 +24,7 @@ assignees: ''
 3.
 
 ## Environment
-- Homelab Assistant Version:
+- Tomo Assistant Version:
 - Docker Version:
 - OS:
 

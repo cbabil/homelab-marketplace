@@ -19,7 +19,7 @@ assignees: ''
 <!-- media, networking, monitoring, security, storage, or utility -->
 
 ## Why This App?
-<!-- Why would this be useful for homelab users? -->
+<!-- Why would this be useful for tomo users? -->
 
 ## Additional Information
 <!-- Links to documentation, GitHub repo, etc. -->

@@ -1,17 +1,17 @@
-id: homelab-agent
-name: Homelab Agent
+id: tomo-agent
+name: Tomo Agent
 description: Agent for remote server management, monitoring, and deployment orchestration.
 version: "1.0.0"
 category: utility
-author: homelab
+author: tomo
 tags:
   - agent
   - monitoring
   - management
 
-icon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/homeassistant.svg
-repository: https://github.com/cbabil/homelab-marketplace
-documentation: https://github.com/cbabil/homelab-marketplace/wiki/Homelab-Agent
+icon: https://raw.githubusercontent.com/cbabil/tomo-marketplace/master/assets/icons/agent.svg
+repository: https://github.com/cbabil/tomo-marketplace
+documentation: https://github.com/cbabil/tomo-marketplace/wiki/Tomo-Agent
 
 docker:
   image: alpine:3.19
@@ -22,14 +22,14 @@ docker:
       mode: rw
       description: Agent data and configuration
   environment:
-    - name: HOMELAB_SERVER_URL
+    - name: TOMO_SERVER_URL
       value: ""
       required: true
-      description: URL of the Homelab backend server
+      description: URL of the Tomo backend server
     - name: AGENT_REGISTRATION_CODE
       value: ""
       required: true
-      description: Registration code from Homelab server
+      description: Registration code from Tomo server
     - name: TZ
       value: "UTC"
       required: false

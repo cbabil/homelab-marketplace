@@ -186,4 +186,4 @@ If a malicious app is discovered:
 
 ## Questions?
 
-Open a [Discussion](https://github.com/cbabil/homelab-marketplace/discussions) for security-related questions.
+Open a [Discussion](https://github.com/cbabil/tomo-marketplace/discussions) for security-related questions.
